@@ -3,6 +3,7 @@
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
 const models = [
+  { id: 'openai/gpt-oss-20b',       label: 'GPT OSS 20B'     },
   { id: 'llama-3.3-70b-versatile',  label: 'Llama 3.3 70B'   },
   { id: 'llama-3.1-8b-instant',     label: 'Llama 3.1 8B'    },
   { id: 'mixtral-8x7b-32768',       label: 'Mixtral 8x7B'    },
