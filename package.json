@@ -8,9 +8,10 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron": "electron app/index.js"
+    "electron": "electron app/index.cjs"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "electron": "^44.1.1",
     "groq-sdk": "^1.6.0",
     "react": "^19.2.8",

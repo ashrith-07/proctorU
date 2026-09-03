@@ -35,16 +35,58 @@ html, body, #root {
 
 /* Topbar */
 .topbar {
-  padding: 16px 20px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 .topbar-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   background: linear-gradient(135deg, #a78bfa, #60a5fa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+
+/* Model selector group */
+.model-selector {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.selector-dropdown {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  padding: 7px 28px 7px 12px;
+  cursor: pointer;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: background-color 0.15s;
+}
+.selector-dropdown:hover  { background-color: var(--surface-2); }
+.selector-dropdown:disabled { opacity: 0.45; cursor: not-allowed; }
+.selector-dropdown option  { background: var(--surface); color: var(--text); }
+
+.selector-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
 }
 
 /* Chat area */
@@ -61,8 +103,19 @@ html, body, #root {
 
 .empty {
   margin: auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.empty-title {
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.empty-sub {
+  color: rgba(107,114,128,0.6);
+  font-size: 12.5px;
 }
 
 /* Messages */
