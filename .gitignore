@@ -27,3 +27,6 @@ dist-ssr
 # Electron packaging output
 release
 out
+
+# Local exam sessions (standalone backend run)
+backend/data/sessions.json

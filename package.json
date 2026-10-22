@@ -13,6 +13,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "backend": "node backend/server.cjs",
+    "test": "node --test test/*.test.cjs",
     "electron": "electron .",
     "start": "npm run build && electron ."
   },
