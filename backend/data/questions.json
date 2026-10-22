@@ -53,5 +53,60 @@
       "Sends an IPC event"
     ],
     "correctAnswer": 1
+  },
+  {
+    "id": 6,
+    "question": "Which Electron module lets the main process show native open/save and message dialogs?",
+    "options": [
+      "dialog",
+      "clipboard",
+      "Tray",
+      "globalShortcut"
+    ],
+    "correctAnswer": 0
+  },
+  {
+    "id": 7,
+    "question": "What does `contextIsolation: true` do?",
+    "options": [
+      "Disables the network",
+      "Runs the preload script in a separate JavaScript context from the web page",
+      "Hides the window from the taskbar",
+      "Encrypts IPC messages"
+    ],
+    "correctAnswer": 1
+  },
+  {
+    "id": 8,
+    "question": "Which Electron API reports whether the operating system is using a dark theme?",
+    "options": [
+      "nativeTheme",
+      "screen",
+      "powerMonitor",
+      "session"
+    ],
+    "correctAnswer": 0
+  },
+  {
+    "id": 9,
+    "question": "Which API lets the main process react to the computer going to sleep?",
+    "options": [
+      "powerMonitor",
+      "desktopCapturer",
+      "ipcRenderer",
+      "autoUpdater"
+    ],
+    "correctAnswer": 0
+  },
+  {
+    "id": 10,
+    "question": "Which method sends a one-way message from the renderer to the main process (no reply)?",
+    "options": [
+      "ipcRenderer.invoke",
+      "ipcRenderer.send",
+      "ipcMain.handle",
+      "webContents.send"
+    ],
+    "correctAnswer": 1
   }
 ]
