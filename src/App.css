@@ -565,3 +565,68 @@ body {
   opacity: 0.6;
   word-break: break-all;
 }
+
+/* ══════════════════════════════════════════════════
+   SETUP extras
+══════════════════════════════════════════════════ */
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 8px 14px;
+}
+.btn-ghost:hover:not(:disabled) { background: var(--surface-2); }
+
+.action-row { flex-wrap: wrap; }
+
+.hint {
+  margin-top: 10px;
+  margin-bottom: 0 !important;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.path-text {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.bottom-actions .me-error { margin-bottom: 10px; }
+
+
+/* ══════════════════════════════════════════════════
+   EXAM proctoring indicators
+══════════════════════════════════════════════════ */
+.me-exam-proctor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-sub);
+}
+
+.me-rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--wrong);
+  animation: me-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes me-blink { 50% { opacity: 0.25; } }
+
+.me-pip {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 128px;
+  height: 96px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #000;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  transform: scaleX(-1); /* mirror, like a normal webcam preview */
+}

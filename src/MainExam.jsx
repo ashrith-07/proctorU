@@ -3,8 +3,14 @@
 
 import { useState } from 'react';
 import { api } from './api';
+import CameraPreview from './CameraPreview';
 
-function MainExam() {
+function formatTime(seconds) {
+  const s = Math.floor(seconds);
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function MainExam({ stream, elapsed, counts, onSessionStart, onSessionEnd }) {
   const [view, setView] = useState('login');
 
   // Login
@@ -38,6 +44,7 @@ function MainExam() {
       const loaded = await loadQuestions();
       setSessionId(data.sessionId);
       setQuestions(loaded);
+      await onSessionStart(data.sessionId);
       setView('exam');
     } catch (error) {
       setLoginError(error.message);
@@ -76,6 +83,7 @@ function MainExam() {
   async function handleSubmitExam() {
     try {
       const data = await api('/exam/submit', { method: 'POST', body: { sessionId } });
+      onSessionEnd();
       setResult(data.result);
       setView('result');
     } catch (error) {
@@ -149,6 +157,10 @@ function MainExam() {
         <div className="me-exam-topbar">
           <span className="me-exam-title">Athena Exam</span>
           <span className="me-exam-attempted">Attempted: {attempted} / {total}</span>
+          <span className="me-exam-proctor">
+            <span className="me-rec-dot" /> REC · 📷 {counts.camera} · 🖥 {counts.screen} · {formatTime(elapsed)}
+          </span>
+          <CameraPreview stream={stream} className="me-pip" />
         </div>
 
         {/* Progress dots */}
