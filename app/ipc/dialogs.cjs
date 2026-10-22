@@ -1,6 +1,5 @@
 const { ipcMain, dialog } = require('electron');
 const { getMainWindow } = require('../windows/main-window.cjs');
-const snapshots = require('../services/snapshots.cjs');
 
 const RULES =
   '1. Stay on the exam screen.\n' +
@@ -33,25 +32,6 @@ function register() {
       cancelId: 1,
     });
     return { buttonIndex: result.response, checkboxChecked: result.checkboxChecked };
-  });
-
-  // Folder picker: where camera/screen snapshots are stored
-  ipcMain.handle('select-camera-save-folder', async () => {
-    const result = await dialog.showOpenDialog(getMainWindow(), {
-      title: 'Select Folder to Save Snapshots',
-      properties: ['openDirectory', 'createDirectory'],
-    });
-    if (result.canceled || result.filePaths.length === 0) return null;
-    snapshots.setCustomFolder(result.filePaths[0]);
-    return result.filePaths[0];
-  });
-
-  ipcMain.handle('select-file', async () => {
-    const result = await dialog.showOpenDialog(getMainWindow(), {
-      title: 'Select a File',
-      properties: ['openFile'],
-    });
-    return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
   });
 }
 

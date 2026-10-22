@@ -9,29 +9,42 @@ function listen(channel, callback) {
   return () => ipcRenderer.removeListener(channel, handler);
 }
 
+const invoke = (channel) => (...args) => ipcRenderer.invoke(channel, ...args);
+
 contextBridge.exposeInMainWorld('athena', {
-  // ── Local exam server URL (port is picked at runtime)
-  getApiBase: () => ipcRenderer.invoke('get-api-base'),
+  // Local exam server URL (port is picked at runtime)
+  getApiBase: invoke('get-api-base'),
 
-  // ── Exam clock (driven by the main process)
-  startTimerOnMain: () => ipcRenderer.invoke('start-timer'),
-  stopTimerOnMain: () => ipcRenderer.invoke('stop-timer'),
-  registerListenerForTimerTickFromMain: (cb) => listen('timer', cb),
-  registerListenerForCameraSnapFromMain: (cb) => listen('camera-shot', cb),
-  registerListenerForScreenShotFromMain: (cb) => listen('screen-shot', cb),
-
-  // ── Snapshots saved to disk by main
-  storeCameraSnapImageOnDisk: (data) => ipcRenderer.invoke('store-camera-snap-image-on-disk', data),
-  storeScreenSnapImageOnDisk: (data) => ipcRenderer.invoke('store-screen-snap-image-on-disk', data),
-  getScreenSource: () => ipcRenderer.invoke('get-screen-source'),
-
-  // ── Native dialogs
-  showRules: () => ipcRenderer.send('show-rules'),
-  showCheckboxDialog: () => ipcRenderer.invoke('show-checkbox-dialog'),
-  selectCameraSaveFolder: () => ipcRenderer.invoke('select-camera-save-folder'),
-  selectFile: () => ipcRenderer.invoke('select-file'),
-
-  // ── OS theme ('dark' | 'light')
-  getTheme: () => ipcRenderer.invoke('get-theme'),
+  // OS theme ('dark' | 'light')
+  getTheme: invoke('get-theme'),
   onThemeChange: (cb) => listen('theme-changed', cb),
+
+  // Proctoring (camera frames from the page, screenshots from main)
+  startProctoring: invoke('proctor:start'),
+  stopProctoring: invoke('proctor:stop'),
+  saveCameraSnap: invoke('proctor:save-camera-snap'),
+  onTimerTick: (cb) => listen('timer', cb),
+  onCameraShotRequest: (cb) => listen('camera-shot', cb),
+  onSnapshotSaved: (cb) => listen('snapshot-saved', cb),
+  onProctorError: (cb) => listen('proctor-error', cb),
+
+  // OS permissions (macOS camera / screen recording)
+  getPermissionStatus: invoke('permissions:status'),
+  requestCameraAccess: invoke('permissions:request-camera'),
+  requestScreenAccess: invoke('permissions:request-screen'),
+  openPrivacySettings: invoke('permissions:open-settings'),
+
+  // Window
+  setFullScreen: invoke('window:set-fullscreen'),
+  isFullScreen: invoke('window:is-fullscreen'),
+  onFullScreenChange: (cb) => listen('fullscreen-changed', cb),
+
+  // Snapshot folder
+  getSnapshotFolder: invoke('snapshots:get-folder'),
+  selectSnapshotFolder: invoke('snapshots:select-folder'),
+  openSnapshotFolder: invoke('snapshots:open-folder'),
+
+  // Native dialogs
+  showRules: () => ipcRenderer.send('show-rules'),
+  showCheckboxDialog: invoke('show-checkbox-dialog'),
 });

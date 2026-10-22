@@ -3,7 +3,8 @@
 const { app, BrowserWindow, dialog } = require('electron');
 const { createMainWindow } = require('./windows/main-window.cjs');
 const { registerAll } = require('./ipc/index.cjs');
-const examClock = require('./services/exam-clock.cjs');
+const proctor = require('./services/proctor.cjs');
+const { watchFullScreen } = require('./ipc/system.cjs');
 const backend = require('./services/backend.cjs');
 
 // Only one exam window at a time: a second launch focuses the first one
@@ -27,18 +28,18 @@ if (!app.requestSingleInstanceLock()) {
       return;
     }
     registerAll();
-    createMainWindow();
+    watchFullScreen(createMainWindow());
 
     // macOS: re-create the window when the dock icon is clicked and none are open
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+      if (BrowserWindow.getAllWindows().length === 0) watchFullScreen(createMainWindow());
     });
   });
 
   // An exam app should fully quit when its window closes (also on macOS)
   app.on('window-all-closed', () => app.quit());
   app.on('before-quit', () => {
-    examClock.stop();
+    proctor.stop();
     backend.stop();
   });
 }
