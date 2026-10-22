@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import './App.css';
 import MainExam from './MainExam';
 import Setup from './Setup';
+import ViolationBanner from './ViolationBanner';
 import { useCamera } from './hooks/useCamera';
 
 function App() {
   const [view, setView] = useState('setup'); // 'setup' | 'exam'
   const [elapsed, setElapsed] = useState(0);
   const [counts, setCounts] = useState({ camera: 0, screen: 0 });
+  const [violation, setViolation] = useState({ id: 0, count: 0, max: 5, message: '' });
   const camera = useCamera();
   const { captureJpeg } = camera;
 
@@ -19,20 +21,39 @@ function App() {
     return window.athena.onThemeChange((theme) => document.documentElement.setAttribute('data-theme', theme));
   }, []);
 
-  // ─── Block copy/paste/cut/select-all shortcuts
+  // ─── Block clipboard, context menu and dev-tools shortcuts; each attempt is a violation
   useEffect(() => {
-    const blocked = ['c', 'v', 'x', 'a'];
+    const clipboardKeys = ['c', 'v', 'x', 'a'];
     function handleKeyDown(e) {
-      if ((e.ctrlKey || e.metaKey) && blocked.includes(e.key.toLowerCase())) e.preventDefault();
+      const key = e.key.toLowerCase();
+      const mod = e.ctrlKey || e.metaKey;
+      const devTools =
+        key === 'f12' || (mod && e.shiftKey && ['i', 'j', 'c'].includes(key)) || (e.metaKey && e.altKey && key === 'i');
+      if (devTools) {
+        e.preventDefault();
+        window.athena.reportViolation('devtools-shortcut');
+      } else if (mod && clipboardKeys.includes(key)) {
+        e.preventDefault();
+        if (key !== 'a') window.athena.reportViolation('copy-paste');
+      }
+    }
+    function block(e) {
+      e.preventDefault();
+      window.athena.reportViolation('copy-paste');
     }
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    ['copy', 'cut', 'paste', 'contextmenu'].forEach((name) => window.addEventListener(name, block));
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      ['copy', 'cut', 'paste', 'contextmenu'].forEach((name) => window.removeEventListener(name, block));
+    };
   }, []);
 
   // ─── Proctoring events pushed by the main process
   useEffect(() => {
     const offTimer = window.athena.onTimerTick(setElapsed);
     const offSaved = window.athena.onSnapshotSaved(({ counts }) => setCounts(counts));
+    const offViolation = window.athena.onViolation((v) => setViolation((prev) => ({ ...v, id: prev.id + 1 })));
     const offError = window.athena.onProctorError(({ kind, message }) =>
       console.error(`Proctoring (${kind}):`, message));
     // Main asks for a webcam frame every few seconds; only the page can read the camera
@@ -47,26 +68,36 @@ function App() {
     return () => {
       offTimer();
       offSaved();
+      offViolation();
       offError();
       offCamera();
     };
   }, [captureJpeg]);
 
+  function handleSessionStart(sessionId) {
+    setViolation((prev) => ({ ...prev, count: 0, message: '', id: prev.id }));
+    return window.athena.startProctoring(sessionId);
+  }
+
   // Leaving the exam (submitted): stop the loop and give the student their screen back
-  function handleSessionEnd() {
-    window.athena.stopProctoring();
-    window.athena.setFullScreen(false);
+  async function handleSessionEnd() {
+    await window.athena.stopProctoring(); // first stop, otherwise leaving fullscreen is a violation
+    await window.athena.setFullScreen(false);
   }
 
   if (view === 'exam') {
     return (
-      <MainExam
-        stream={camera.stream}
-        elapsed={elapsed}
-        counts={counts}
-        onSessionStart={(sessionId) => window.athena.startProctoring(sessionId)}
-        onSessionEnd={handleSessionEnd}
-      />
+      <>
+        <ViolationBanner violation={violation} />
+        <MainExam
+          stream={camera.stream}
+          elapsed={elapsed}
+          counts={counts}
+          violation={violation}
+          onSessionStart={handleSessionStart}
+          onSessionEnd={handleSessionEnd}
+        />
+      </>
     );
   }
 

@@ -1,7 +1,7 @@
 // MainExam.jsx
 // Login → Exam (one question at a time) → Result
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from './api';
 import CameraPreview from './CameraPreview';
 
@@ -10,7 +10,7 @@ function formatTime(seconds) {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-function MainExam({ stream, elapsed, counts, onSessionStart, onSessionEnd }) {
+function MainExam({ stream, elapsed, counts, violation, onSessionStart, onSessionEnd }) {
   const [view, setView] = useState('login');
 
   // Login
@@ -28,6 +28,8 @@ function MainExam({ stream, elapsed, counts, onSessionStart, onSessionEnd }) {
 
   // Result
   const [result, setResult] = useState(null);
+  const [autoSubmitted, setAutoSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // ── Start session ──────────────────────────────
   async function handleStartExam() {
@@ -80,16 +82,29 @@ function MainExam({ stream, elapsed, counts, onSessionStart, onSessionEnd }) {
   }
 
   // ── Submit exam ────────────────────────────────
-  async function handleSubmitExam() {
+  const handleSubmitExam = useCallback(async (auto = false) => {
+    if (submitting) return;
+    setSubmitting(true);
     try {
       const data = await api('/exam/submit', { method: 'POST', body: { sessionId } });
-      onSessionEnd();
+      await onSessionEnd();
+      setAutoSubmitted(auto);
       setResult(data.result);
       setView('result');
     } catch (error) {
       alert(`Failed to submit exam: ${error.message}`);
+    } finally {
+      setSubmitting(false);
     }
-  }
+  }, [sessionId, submitting, onSessionEnd]);
+
+  // Too many violations: the exam is submitted automatically
+  useEffect(() => {
+    if (view !== 'exam') return undefined;
+    return window.athena.onViolation(({ count, max }) => {
+      if (count >= max) handleSubmitExam(true);
+    });
+  }, [view, handleSubmitExam]);
 
   // ══════════════════════════════════════════════
   //  LOGIN
@@ -159,6 +174,7 @@ function MainExam({ stream, elapsed, counts, onSessionStart, onSessionEnd }) {
           <span className="me-exam-attempted">Attempted: {attempted} / {total}</span>
           <span className="me-exam-proctor">
             <span className="me-rec-dot" /> REC · 📷 {counts.camera} · 🖥 {counts.screen} · {formatTime(elapsed)}
+            {violation.count > 0 && <span className="me-violations"> · ⚠ {violation.count}/{violation.max}</span>}
           </span>
           <CameraPreview stream={stream} className="me-pip" />
         </div>
@@ -215,8 +231,8 @@ function MainExam({ stream, elapsed, counts, onSessionStart, onSessionEnd }) {
           {isLast ? (
             <button
               className="me-btn-submit"
-              disabled={attempted === 0}
-              onClick={handleSubmitExam}
+              disabled={attempted === 0 || submitting}
+              onClick={() => handleSubmitExam()}
             >
               Submit Exam
             </button>
@@ -243,7 +259,9 @@ function MainExam({ stream, elapsed, counts, onSessionStart, onSessionEnd }) {
         <div className="me-result-card">
           <div className="me-result-icon">🎉</div>
           <h1 className="me-result-title">Exam Submitted</h1>
-          <p className="me-result-sub">Well done, {name}!</p>
+          <p className="me-result-sub">
+            {autoSubmitted ? `Submitted automatically after too many violations, ${name}.` : `Well done, ${name}!`}
+          </p>
 
           <div className="me-result-grid">
             <div className="me-stat me-stat-neutral">
@@ -257,6 +275,10 @@ function MainExam({ stream, elapsed, counts, onSessionStart, onSessionEnd }) {
             <div className="me-stat me-stat-wrong">
               <span className="me-stat-val">{result?.wrong ?? 0}</span>
               <span className="me-stat-label">Wrong</span>
+            </div>
+            <div className="me-stat me-stat-wrong">
+              <span className="me-stat-val">{result?.violations ?? 0}</span>
+              <span className="me-stat-label">Violations</span>
             </div>
             <div className="me-stat me-stat-skipped">
               <span className="me-stat-val">{skipped}</span>

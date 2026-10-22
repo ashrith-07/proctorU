@@ -630,3 +630,23 @@ body {
   box-shadow: var(--shadow-md);
   transform: scaleX(-1); /* mirror, like a normal webcam preview */
 }
+
+
+/* ══════════════════════════════════════════════════
+   VIOLATIONS
+══════════════════════════════════════════════════ */
+.violation-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 12px 20px;
+  text-align: center;
+  font-size: 14px;
+  background: var(--wrong);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+}
+
+.me-violations { color: var(--wrong); font-weight: 600; }
