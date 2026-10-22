@@ -1,208 +1,221 @@
-import { useState, useRef, useEffect } from 'react'
-import './App.css'
+// App.jsx
+// Handles: OS theme detection, setup screen (camera + fullscreen + screen share), then renders MainExam.
 
-// ─── Provider / model catalog ────────────────────────────────────────────────
-// Mirrored here as a fallback when running outside Electron (plain browser dev)
-const FALLBACK_PROVIDERS = [
-  {
-    provider: 'groq',
-    label:    'Groq',
-    models: [
-      { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B'  },
-      { id: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B'   },
-      { id: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B'   },
-      { id: 'gemma2-9b-it',            label: 'Gemma 2 9B'      },
-    ],
-  },
-  {
-    provider: 'openai',
-    label:    'OpenAI',
-    models: [
-      { id: 'gpt-4o',      label: 'GPT-4o'      },
-      { id: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-      { id: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-    ],
-  },
-]
+import { useEffect, useRef, useState } from 'react';
+import './App.css';
+import MainExam from './MainExam';
 
-// ─── IPC bridge (safe even in plain browser) ─────────────────────────────────
-const api = window.electronAPI ?? null
+function App() {
+  const [view, setView] = useState('setup'); // 'setup' | 'exam'
+  const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [fullScreen, setFullScreen] = useState(false);
+  const [screenEnabled, setScreenEnabled] = useState(false);
+  const [timer, setTimer] = useState('');
+  const videoRef = useRef(null);
+  const screenStreamRef = useRef(null);
 
-export default function App() {
-  const [providers, setProviders] = useState(FALLBACK_PROVIDERS)
-  const [provider,  setProvider]  = useState(FALLBACK_PROVIDERS[0].provider)
-  const [model,     setModel]     = useState(FALLBACK_PROVIDERS[0].models[0].id)
-
-  const [messages, setMessages] = useState([])
-  const [input,    setInput]    = useState('')
-  const [loading,  setLoading]  = useState(false)
-  const [error,    setError]    = useState(null)
-
-  const bottomRef = useRef(null)
-
-  // Load provider/model catalog from main process on mount
+  // ─── Apply OS theme on mount and listen for changes
   useEffect(() => {
-    if (!api) return
-    api.getProviders().then(list => {
-      setProviders(list)
-      setProvider(list[0].provider)
-      setModel(list[0].models[0].id)
-    })
-  }, [])
+    async function applyTheme() {
+      const theme = await window.athena.getTheme();
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+    applyTheme();
 
-  // Auto-scroll to bottom on new message
+    const removeThemeListener = window.athena.onThemeChange((theme) => {
+      document.documentElement.setAttribute('data-theme', theme);
+    });
+
+    return () => removeThemeListener();
+  }, []);
+
+  // ─── Block copy/paste/cut/select-all shortcuts
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  // When provider changes, reset model to first of new provider
-  const handleProviderChange = (e) => {
-    const newProvider = e.target.value
-    setProvider(newProvider)
-    const found = providers.find(p => p.provider === newProvider)
-    setModel(found?.models[0]?.id ?? '')
-    setMessages([])
-    setError(null)
-  }
-
-  const currentModels = providers.find(p => p.provider === provider)?.models ?? []
-
-  const sendMessage = async () => {
-    const text = input.trim()
-    if (!text || loading) return
-
-    const newMessages = [...messages, { role: 'user', content: text }]
-    setMessages(newMessages)
-    setInput('')
-    setLoading(true)
-    setError(null)
-
-    try {
-      let reply
-
-      if (api) {
-        // ── Electron path: call via IPC (key stays in main process) ──
-        reply = await api.chat({ provider, model, messages: newMessages })
-      } else {
-        // ── Browser fallback: direct fetch (dev only) ──
-        const endpoints = {
-          groq:   'https://api.groq.com/openai/v1/chat/completions',
-          openai: 'https://api.openai.com/v1/chat/completions',
-        }
-        const res = await fetch(endpoints[provider], {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ model, messages: newMessages }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error?.message ?? `HTTP ${res.status}`)
-        reply = data.choices[0].message.content
+    const blocked = ['c', 'v', 'x', 'a'];
+    function handleKeyDown(e) {
+      if ((e.ctrlKey || e.metaKey) && blocked.includes(e.key.toLowerCase())) {
+        e.preventDefault();
       }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
-      setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+
+  async function saveVideoScreenShots() {
+    if (!videoRef.current || !videoRef.current.srcObject) return;
+    try {
+      const track = videoRef.current.srcObject.getVideoTracks()[0];
+      if (!track) return;
+      const imageCapture = new ImageCapture(track);
+      const blob = await imageCapture.takePhoto();
+      const arrayBuffer = await blob.arrayBuffer();
+      window.athena.storeCameraSnapImageOnDisk(arrayBuffer);
+    } catch (error) {
+      console.error('Failed to capture camera image:', error);
+    }
+  }
+
+  async function saveScreenShot() {
+    const stream = screenStreamRef.current;
+    if (!stream) return;
+    try {
+      const track = stream.getVideoTracks()[0];
+      if (!track) return;
+      const canvas = document.createElement('canvas');
+      const video = document.createElement('video');
+      video.srcObject = new MediaStream([track]);
+      await video.play();
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      video.pause();
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+      const arrayBuffer = await blob.arrayBuffer();
+      window.athena.storeScreenSnapImageOnDisk(arrayBuffer);
     } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+      console.error('Screen capture failed:', err);
     }
   }
 
-  const handleKey = e => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
+  useEffect(() => {
+    const removeTimerListener = window.athena.registerListenerForTimerTickFromMain(setTimer);
+    const removeCameraListener = window.athena.registerListenerForCameraSnapFromMain(saveVideoScreenShots);
+    const removeScreenListener = window.athena.registerListenerForScreenShotFromMain(saveScreenShot);
+    return () => {
+      removeTimerListener();
+      removeCameraListener();
+      removeScreenListener();
+    };
+  }, []);
+
+  async function getCameraAccess() {
+    try {
+      const videoData = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) videoRef.current.srcObject = videoData;
+      setCameraEnabled(true);
+    } catch {
+      alert('Cannot access Camera');
     }
   }
 
-  const currentProviderLabel = providers.find(p => p.provider === provider)?.label ?? provider
+  async function enableFullScreen() {
+    try {
+      await document.documentElement.requestFullscreen();
+      setFullScreen(true);
+    } catch {
+      alert('Cannot access full screen');
+    }
+  }
 
+  // ─── Called when user clicks "Enable Screen Share" in setup
+  async function enableScreenShare() {
+    try {
+      const sourceId = await window.athena.getScreenSource();
+      if (!sourceId) { alert('No screen source found.'); return; }
+      // Use the user's actual display resolution (accounts for Retina/HiDPI)
+      const w = Math.round(window.screen.width * window.devicePixelRatio);
+      const h = Math.round(window.screen.height * window.devicePixelRatio);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: sourceId,
+            maxWidth: w,
+            maxHeight: h
+          }
+        }
+      });
+      screenStreamRef.current = stream;
+      setScreenEnabled(true);
+    } catch {
+      alert('Cannot access Screen Share');
+    }
+  }
+
+  // ─── Render MainExam once setup is done
+  if (view === 'exam') {
+    return <MainExam />;
+  }
+
+  // ─── Setup View
   return (
-    <div className="app">
-      <header className="topbar">
-        <span className="topbar-title">LLM Chat</span>
-
-        <div className="model-selector">
-          {/* Provider picker */}
-          <select
-            id="provider-select"
-            className="selector-dropdown"
-            value={provider}
-            onChange={handleProviderChange}
-            disabled={loading}
-            title="Select provider"
-          >
-            {providers.map(p => (
-              <option key={p.provider} value={p.provider}>{p.label}</option>
-            ))}
-          </select>
-
-          <span className="selector-divider" aria-hidden="true" />
-
-          {/* Model picker */}
-          <select
-            id="model-select"
-            className="selector-dropdown"
-            value={model}
-            onChange={e => setModel(e.target.value)}
-            disabled={loading}
-            title="Select model"
-          >
-            {currentModels.map(m => (
-              <option key={m.id} value={m.id}>{m.label}</option>
-            ))}
-          </select>
-        </div>
-      </header>
-
-      <div className="chat-area">
-        {messages.length === 0 && !loading && (
-          <div className="empty">
-            <p className="empty-title">What can I help you with?</p>
-            <p className="empty-sub">{currentProviderLabel} · {currentModels.find(m => m.id === model)?.label}</p>
-          </div>
-        )}
-
-        {messages.map((msg, i) => (
-          <div key={i} className={`message-row ${msg.role}`}>
-            <div className="bubble">{msg.content}</div>
-          </div>
-        ))}
-
-        {loading && (
-          <div className="message-row assistant">
-            <div className="bubble">
-              <span className="typing-dots">
-                <span /><span /><span />
-              </span>
+    <div className="page-container">
+      <div className="card-container">
+        {/* Camera */}
+        <div className="permission-item">
+          <div className="permission-content">
+            <h3>Configure Camera</h3>
+            <p>Kindly configure Camera to attempt quiz/contests.</p>
+            <div className="action-row">
+              <button
+                className="btn btn-black"
+                disabled={cameraEnabled}
+                onClick={getCameraAccess}
+              >
+                {cameraEnabled ? 'Camera Connected' : 'Get Camera Access'}
+              </button>
+              <video ref={videoRef} autoPlay playsInline className="video-preview" />
             </div>
           </div>
-        )}
+        </div>
 
-        {error && <p className="error">⚠️ {error}</p>}
+        <div className="divider"></div>
 
-        <div ref={bottomRef} />
+        {/* Fullscreen */}
+        <div className="permission-item">
+          <div className="permission-content">
+            <h3>Switch to Full Screen</h3>
+            <button
+              className="btn btn-primary"
+              disabled={fullScreen}
+              onClick={enableFullScreen}
+            >
+              {fullScreen ? 'Full Screen Enabled' : 'Give Full Screen Permissions'}
+            </button>
+          </div>
+        </div>
+
+        <div className="divider"></div>
+
+        {/* Screen Share */}
+        <div className="permission-item">
+          <div className="permission-content">
+            <h3>Enable Screen Share</h3>
+            <p>Required to monitor your screen during the exam.</p>
+            <button
+              className="btn btn-black"
+              disabled={screenEnabled}
+              onClick={enableScreenShare}
+            >
+              {screenEnabled ? 'Screen Share Enabled' : 'Enable Screen Share'}
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="input-bar">
-        <textarea
-          id="chat-input"
-          className="chat-input"
-          rows={1}
-          placeholder={`Message ${currentProviderLabel}…`}
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKey}
-          disabled={loading}
-        />
+      {/* Go To Test */}
+      <div className="bottom-actions">
         <button
-          id="send-btn"
-          className="send-btn"
-          onClick={sendMessage}
-          disabled={!input.trim() || loading}
+          className="btn btn-primary"
+          disabled={!cameraEnabled || !fullScreen || !screenEnabled}
+          onClick={async () => {
+            try { await window.athena.startTimerOnMain(); } catch (error) { console.error(error); }
+            setView('exam');
+          }}
         >
-          Send
+          Go To Test
         </button>
       </div>
+
+      {timer !== '' && (
+        <div className="muted" style={{ marginTop: '8px', fontSize: '13px' }}>
+          {timer} (s) elapsed
+        </div>
+      )}
     </div>
-  )
+  );
 }
+
+export default App;
