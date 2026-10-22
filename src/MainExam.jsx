@@ -2,8 +2,7 @@
 // Login → Exam (one question at a time) → Result
 
 import { useState } from 'react';
-
-const API = 'http://localhost:3000';
+import { api } from './api';
 
 function MainExam() {
   const [view, setView] = useState('login');
@@ -32,18 +31,16 @@ function MainExam() {
       return;
     }
     try {
-      const res = await fetch(`${API}/exam/start`, {
+      const data = await api('/exam/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userId.trim(), name: name.trim() }),
+        body: { userId: userId.trim(), name: name.trim() },
       });
-      const data = await res.json();
-      if (!res.ok) { setLoginError(data.message); return; }
+      const loaded = await loadQuestions();
       setSessionId(data.sessionId);
-      await loadQuestions();
+      setQuestions(loaded);
       setView('exam');
-    } catch {
-      setLoginError('Could not connect to the exam server. Make sure it is running.');
+    } catch (error) {
+      setLoginError(error.message);
     }
   }
 
@@ -51,11 +48,7 @@ function MainExam() {
   async function loadQuestions() {
     setLoadingQuestions(true);
     try {
-      const res = await fetch(`${API}/exam/mcq`);
-      const data = await res.json();
-      setQuestions(data);
-    } catch {
-      alert('Failed to load questions.');
+      return await api('/exam/mcq');
     } finally {
       setLoadingQuestions(false);
     }
@@ -66,30 +59,27 @@ function MainExam() {
     if (answers[questionId] !== undefined) return;
     setAnswers(prev => ({ ...prev, [questionId]: selectedAnswer }));
     try {
-      const res = await fetch(`${API}/exam/answer`, {
+      const data = await api('/exam/answer', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, questionId, selectedAnswer }),
+        body: { sessionId, questionId, selectedAnswer },
       });
-      const data = await res.json();
-      if (res.ok) setAttempted(data.attempted);
-    } catch {
-      console.error('Failed to submit answer.');
+      setAttempted(data.attempted);
+    } catch (error) {
+      // Not saved on the server: unlock the question so the student can retry
+      setAnswers(prev =>
+        Object.fromEntries(Object.entries(prev).filter(([id]) => Number(id) !== questionId)));
+      alert(`Could not save your answer: ${error.message}`);
     }
   }
 
   // ── Submit exam ────────────────────────────────
   async function handleSubmitExam() {
     try {
-      const res = await fetch(`${API}/exam/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId }),
-      });
-      const data = await res.json();
-      if (res.ok) { setResult(data.result); setView('result'); }
-    } catch {
-      alert('Failed to submit exam. Please try again.');
+      const data = await api('/exam/submit', { method: 'POST', body: { sessionId } });
+      setResult(data.result);
+      setView('result');
+    } catch (error) {
+      alert(`Failed to submit exam: ${error.message}`);
     }
   }
 

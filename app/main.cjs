@@ -1,9 +1,10 @@
 // Electron main process entry point: app lifecycle only.
 // Windows live in ./windows, IPC handlers in ./ipc, background logic in ./services.
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, dialog } = require('electron');
 const { createMainWindow } = require('./windows/main-window.cjs');
 const { registerAll } = require('./ipc/index.cjs');
 const examClock = require('./services/exam-clock.cjs');
+const backend = require('./services/backend.cjs');
 
 // Only one exam window at a time: a second launch focuses the first one
 if (!app.requestSingleInstanceLock()) {
@@ -17,7 +18,14 @@ if (!app.requestSingleInstanceLock()) {
     }
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
+    try {
+      await backend.start();
+    } catch (error) {
+      dialog.showErrorBox('Athena Exam', `Could not start the exam server:\n${error.message}`);
+      app.quit();
+      return;
+    }
     registerAll();
     createMainWindow();
 
@@ -29,5 +37,8 @@ if (!app.requestSingleInstanceLock()) {
 
   // An exam app should fully quit when its window closes (also on macOS)
   app.on('window-all-closed', () => app.quit());
-  app.on('before-quit', () => examClock.stop());
+  app.on('before-quit', () => {
+    examClock.stop();
+    backend.stop();
+  });
 }

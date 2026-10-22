@@ -10,6 +10,9 @@ function listen(channel, callback) {
 }
 
 contextBridge.exposeInMainWorld('athena', {
+  // ── Local exam server URL (port is picked at runtime)
+  getApiBase: () => ipcRenderer.invoke('get-api-base'),
+
   // ── Exam clock (driven by the main process)
   startTimerOnMain: () => ipcRenderer.invoke('start-timer'),
   stopTimerOnMain: () => ipcRenderer.invoke('stop-timer'),
