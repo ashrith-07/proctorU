@@ -5,7 +5,14 @@ const { createMainWindow } = require('./windows/main-window.cjs');
 const { registerAll } = require('./ipc/index.cjs');
 const proctor = require('./services/proctor.cjs');
 const { watchFullScreen } = require('./ipc/system.cjs');
+const violations = require('./services/violations.cjs');
 const backend = require('./services/backend.cjs');
+
+function openMainWindow() {
+  const win = createMainWindow();
+  watchFullScreen(win);
+  violations.watchWindow(win);
+}
 
 // Only one exam window at a time: a second launch focuses the first one
 if (!app.requestSingleInstanceLock()) {
@@ -28,11 +35,12 @@ if (!app.requestSingleInstanceLock()) {
       return;
     }
     registerAll();
-    watchFullScreen(createMainWindow());
+    openMainWindow();
+    violations.init();
 
     // macOS: re-create the window when the dock icon is clicked and none are open
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) watchFullScreen(createMainWindow());
+      if (BrowserWindow.getAllWindows().length === 0) openMainWindow();
     });
   });
 

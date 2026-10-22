@@ -26,6 +26,8 @@ contextBridge.exposeInMainWorld('athena', {
   onTimerTick: (cb) => listen('timer', cb),
   onCameraShotRequest: (cb) => listen('camera-shot', cb),
   onSnapshotSaved: (cb) => listen('snapshot-saved', cb),
+  reportViolation: (type) => ipcRenderer.send('violation:report', type),
+  onViolation: (cb) => listen('violation', cb),
   onProctorError: (cb) => listen('proctor-error', cb),
 
   // OS permissions (macOS camera / screen recording)

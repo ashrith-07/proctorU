@@ -1,5 +1,9 @@
 const { ipcMain } = require('electron');
 const proctor = require('../services/proctor.cjs');
+const violations = require('../services/violations.cjs');
+
+// Only these are detected by the page itself; the rest come from the main process
+const RENDERER_VIOLATIONS = ['copy-paste', 'devtools-shortcut'];
 
 function register() {
   ipcMain.handle('proctor:start', (_event, sessionId) => {
@@ -7,6 +11,9 @@ function register() {
     proctor.start(sessionId);
   });
   ipcMain.handle('proctor:stop', () => proctor.stop());
+  ipcMain.on('violation:report', (_event, type) => {
+    if (RENDERER_VIOLATIONS.includes(type)) violations.report(type);
+  });
   ipcMain.handle('proctor:save-camera-snap', (_event, data) => proctor.saveCameraSnapshot(data));
 }
 

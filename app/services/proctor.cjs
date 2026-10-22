@@ -5,6 +5,7 @@
 const { sendToRenderer } = require('../windows/main-window.cjs');
 const { TIMER_TICK_MS, CAMERA_SNAP_MS, SCREEN_SNAP_MS } = require('../config.cjs');
 const snapshots = require('./snapshots.cjs');
+const violations = require('./violations.cjs');
 const { captureJpeg } = require('./screen-capture.cjs');
 
 let handles = [];
@@ -31,6 +32,7 @@ function notifySaved(kind) {
 function start(sessionId) {
   stop(); // calling start twice must never create duplicate intervals
   snapshots.beginSession(sessionId);
+  violations.begin(sessionId);
   startedAt = Date.now();
   handles = [
     setInterval(() => sendToRenderer('timer', (Date.now() - startedAt) / 1000), TIMER_TICK_MS),
@@ -45,6 +47,7 @@ function stop() {
   handles = [];
   startedAt = null;
   snapshots.endSession();
+  violations.end();
 }
 
 async function saveCameraSnapshot(data) {
