@@ -650,3 +650,24 @@ body {
 }
 
 .me-violations { color: var(--wrong); font-weight: 600; }
+
+
+/* ══════════════════════════════════════════════════
+   COUNTDOWN + RESULT actions
+══════════════════════════════════════════════════ */
+.me-countdown {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.me-countdown-low { color: var(--wrong); }
+
+.me-result-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.me-result-card .me-session-id { margin-top: 6px; }

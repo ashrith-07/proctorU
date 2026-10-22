@@ -1,7 +1,7 @@
 // MainExam.jsx
 // Login → Exam (one question at a time) → Result
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from './api';
 import CameraPreview from './CameraPreview';
 
@@ -28,8 +28,11 @@ function MainExam({ stream, elapsed, counts, violation, onSessionStart, onSessio
 
   // Result
   const [result, setResult] = useState(null);
-  const [autoSubmitted, setAutoSubmitted] = useState(false);
+  const [submitReason, setSubmitReason] = useState(null); // null | 'violations' | 'time'
+  const [duration, setDuration] = useState(null); // exam length in seconds (from the server)
+  const autoTried = useRef(false); // an automatic submit is attempted only once
   const [submitting, setSubmitting] = useState(false);
+  const [reportMessage, setReportMessage] = useState('');
 
   // ── Start session ──────────────────────────────
   async function handleStartExam() {
@@ -43,9 +46,10 @@ function MainExam({ stream, elapsed, counts, violation, onSessionStart, onSessio
         method: 'POST',
         body: { userId: userId.trim(), name: name.trim() },
       });
-      const loaded = await loadQuestions();
+      const [loaded, config] = await Promise.all([loadQuestions(), api('/exam/config')]);
       setSessionId(data.sessionId);
       setQuestions(loaded);
+      setDuration(config.durationSeconds);
       await onSessionStart(data.sessionId);
       setView('exam');
     } catch (error) {
@@ -82,13 +86,15 @@ function MainExam({ stream, elapsed, counts, violation, onSessionStart, onSessio
   }
 
   // ── Submit exam ────────────────────────────────
-  const handleSubmitExam = useCallback(async (auto = false) => {
+  // reason: null for a manual submit, 'violations' / 'time' for automatic ones
+  const handleSubmitExam = useCallback(async (reason = null) => {
     if (submitting) return;
     setSubmitting(true);
     try {
       const data = await api('/exam/submit', { method: 'POST', body: { sessionId } });
       await onSessionEnd();
-      setAutoSubmitted(auto);
+      window.athena.setExamProgress(-1);
+      setSubmitReason(reason);
       setResult(data.result);
       setView('result');
     } catch (error) {
@@ -98,13 +104,44 @@ function MainExam({ stream, elapsed, counts, violation, onSessionStart, onSessio
     }
   }, [sessionId, submitting, onSessionEnd]);
 
-  // Too many violations: the exam is submitted automatically
+  // Automatic submit (once): too many violations, or the time is up
+  const autoSubmit = useCallback((reason) => {
+    if (autoTried.current) return;
+    autoTried.current = true;
+    handleSubmitExam(reason);
+  }, [handleSubmitExam]);
+
   useEffect(() => {
     if (view !== 'exam') return undefined;
-    return window.athena.onViolation(({ count, max }) => {
-      if (count >= max) handleSubmitExam(true);
+    const offViolation = window.athena.onViolation(({ count, max }) => {
+      if (count >= max) autoSubmit('violations');
     });
-  }, [view, handleSubmitExam]);
+    const offTick = window.athena.onTimerTick((seconds) => {
+      if (duration !== null && seconds >= duration) autoSubmit('time');
+    });
+    return () => {
+      offViolation();
+      offTick();
+    };
+  }, [view, duration, autoSubmit]);
+
+  // Dock / taskbar progress bar follows the number of answered questions
+  useEffect(() => {
+    if (view === 'exam' && questions.length > 0) window.athena.setExamProgress(attempted / questions.length);
+  }, [view, attempted, questions.length]);
+
+  async function saveReport() {
+    try {
+      const saved = await window.athena.exportReport(sessionId);
+      if (saved) setReportMessage(`Report saved to ${saved}`);
+    } catch (error) {
+      setReportMessage(`Could not save report: ${error.message}`);
+    }
+  }
+
+  async function handleSubmitClick() {
+    if (await window.athena.confirmSubmit(questions.length - attempted)) handleSubmitExam();
+  }
 
   // ══════════════════════════════════════════════
   //  LOGIN
@@ -161,6 +198,7 @@ function MainExam({ stream, elapsed, counts, violation, onSessionStart, onSessio
   // ══════════════════════════════════════════════
   if (view === 'exam') {
     const total = questions.length;
+    const remaining = Math.max(0, (duration ?? 0) - elapsed);
     const q = questions[currentIndex];
     const isAnswered = q ? answers[q.id] !== undefined : false;
     const isFirst = currentIndex === 0;
@@ -172,8 +210,9 @@ function MainExam({ stream, elapsed, counts, violation, onSessionStart, onSessio
         <div className="me-exam-topbar">
           <span className="me-exam-title">Athena Exam</span>
           <span className="me-exam-attempted">Attempted: {attempted} / {total}</span>
+          <span className={`me-countdown ${remaining <= 60 ? 'me-countdown-low' : ''}`}>⏱ {formatTime(remaining)}</span>
           <span className="me-exam-proctor">
-            <span className="me-rec-dot" /> REC · 📷 {counts.camera} · 🖥 {counts.screen} · {formatTime(elapsed)}
+            <span className="me-rec-dot" /> REC · 📷 {counts.camera} · 🖥 {counts.screen}
             {violation.count > 0 && <span className="me-violations"> · ⚠ {violation.count}/{violation.max}</span>}
           </span>
           <CameraPreview stream={stream} className="me-pip" />
@@ -232,7 +271,7 @@ function MainExam({ stream, elapsed, counts, violation, onSessionStart, onSessio
             <button
               className="me-btn-submit"
               disabled={attempted === 0 || submitting}
-              onClick={() => handleSubmitExam()}
+              onClick={handleSubmitClick}
             >
               Submit Exam
             </button>
@@ -260,7 +299,9 @@ function MainExam({ stream, elapsed, counts, violation, onSessionStart, onSessio
           <div className="me-result-icon">🎉</div>
           <h1 className="me-result-title">Exam Submitted</h1>
           <p className="me-result-sub">
-            {autoSubmitted ? `Submitted automatically after too many violations, ${name}.` : `Well done, ${name}!`}
+            {submitReason === 'violations' && `Submitted automatically after too many violations, ${name}.`}
+            {submitReason === 'time' && `Time is up, ${name}. Your exam was submitted automatically.`}
+            {!submitReason && `Well done, ${name}!`}
           </p>
 
           <div className="me-result-grid">
@@ -286,6 +327,12 @@ function MainExam({ stream, elapsed, counts, violation, onSessionStart, onSessio
             </div>
           </div>
 
+          <div className="me-result-actions">
+            <button className="me-btn-nav" onClick={saveReport}>Save Report…</button>
+            <button className="me-btn-nav" onClick={() => window.athena.openSessionFolder(sessionId)}>Open Snapshots</button>
+            <button className="me-btn-nav" onClick={() => window.athena.quitApp()}>Quit</button>
+          </div>
+          {reportMessage && <p className="me-session-id">{reportMessage}</p>}
           <p className="me-session-id">Session: {sessionId}</p>
         </div>
       </div>
