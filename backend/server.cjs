@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const EXAM_CONFIG = {
-  durationSeconds: 10 * 60, // total exam time
+  durationSeconds: Number(process.env.ATHENA_EXAM_SECONDS) || 10 * 60, // total exam time (env override is for testing)
   maxViolations: 5, // exam is auto-submitted after this many violations
 };
 

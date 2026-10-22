@@ -6,7 +6,8 @@ const RULES =
   '2. Camera must remain enabled.\n' +
   '3. Do not leave the exam.\n' +
   '4. Do not use external assistance.\n' +
-  '5. Click Submit Exam when finished.';
+  '5. Click Submit Exam when finished.\n' +
+  '6. Five violations submit your exam automatically.';
 
 function register() {
   ipcMain.on('show-rules', () => {
@@ -35,4 +36,4 @@ function register() {
   });
 }
 
-module.exports = { register };
+module.exports = { register, RULES };

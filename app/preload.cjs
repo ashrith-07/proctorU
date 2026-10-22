@@ -46,6 +46,13 @@ contextBridge.exposeInMainWorld('athena', {
   selectSnapshotFolder: invoke('snapshots:select-folder'),
   openSnapshotFolder: invoke('snapshots:open-folder'),
 
+  // Exam extras
+  setExamProgress: (fraction) => ipcRenderer.send('exam:set-progress', fraction),
+  confirmSubmit: invoke('exam:confirm-submit'),
+  exportReport: invoke('report:export'),
+  openSessionFolder: invoke('snapshots:open-session-folder'),
+  quitApp: invoke('app:quit'),
+
   // Native dialogs
   showRules: () => ipcRenderer.send('show-rules'),
   showCheckboxDialog: invoke('show-checkbox-dialog'),
