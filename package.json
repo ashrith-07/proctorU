@@ -15,7 +15,7 @@
     "backend": "node backend/server.cjs",
     "test": "node --test test/*.test.cjs",
     "electron": "electron .",
-    "start": "npm run build && electron .",
+    "start": "vite build && ATHENA_PROD=1 electron .",
     "dist": "vite build && electron-builder --mac dmg"
   },
   "dependencies": {
