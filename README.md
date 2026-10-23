@@ -8,6 +8,18 @@ camera unplugged) while saving camera and screen snapshots.
 Built for the "Desktop Application" assignment: it focuses on **desktop APIs, windows, IPC and
 system-level interactions**.
 
+## Download
+
+**Latest release (macOS `.dmg`):** https://github.com/ashrith-07/proctorU/releases/tag/v1.0.0
+
+| Mac | File |
+|---|---|
+| Apple Silicon (M1 and later) | `Athena-Exam-1.0.0-arm64.dmg` |
+| Intel | `Athena-Exam-1.0.0-x64.dmg` |
+
+Open the `.dmg` and drag **Athena Exam** to Applications. The app is not notarized, so if macOS says it
+cannot be opened, right-click the app and choose **Open** (or see [Build the macOS app](#build-the-macos-app-dmg)).
+
 ## Features
 
 | Area | What it does | Electron APIs used |
