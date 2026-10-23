@@ -3,7 +3,7 @@ const proctor = require('../services/proctor.cjs');
 const violations = require('../services/violations.cjs');
 
 // Only these are detected by the page itself; the rest come from the main process
-const RENDERER_VIOLATIONS = ['copy-paste', 'devtools-shortcut'];
+const RENDERER_VIOLATIONS = ['copy-paste', 'devtools-shortcut', 'camera-lost'];
 
 function register() {
   ipcMain.handle('proctor:start', (_event, sessionId) => {

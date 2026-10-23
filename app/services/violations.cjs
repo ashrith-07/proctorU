@@ -16,6 +16,7 @@ const MESSAGES = {
   'system-suspend': 'The computer went to sleep.',
   'copy-paste': 'Copy / paste is not allowed.',
   'devtools-shortcut': 'Developer tools are not allowed.',
+  'camera-lost': 'The camera was disconnected.',
 };
 
 const DEDUPE_MS = 2000; // the same violation within this window is counted once
@@ -30,6 +31,9 @@ function begin(id) {
   sessionId = id;
   count = 0;
   lastSeen.clear();
+  // The student may have left full screen between the setup screen and the login screen
+  const win = getMainWindow();
+  if (win && !win.isFullScreen()) win.setFullScreen(true);
   if (screen.getAllDisplays().length > 1) report('multiple-displays', 'Detected at exam start');
 }
 

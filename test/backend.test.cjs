@@ -62,6 +62,7 @@ test('violations are recorded and validated', async () => {
   assert.equal((await post('/exam/violation', { sessionId, type: 'bogus' })).status, 400);
   const res = await (await post('/exam/violation', { sessionId, type: 'window-blur', detail: 'switched app' })).json();
   assert.equal(res.count, 1);
+  assert.equal((await post('/exam/violation', { sessionId, type: 'camera-lost' })).status, 201);
 });
 
 test('submit is idempotent and locks the session', async () => {

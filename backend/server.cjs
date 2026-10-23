@@ -20,6 +20,7 @@ const VIOLATION_TYPES = [
   'system-suspend',
   'copy-paste',
   'devtools-shortcut',
+  'camera-lost',
 ];
 
 // Pages that may call the API: the packaged app (file:// => Origin "null") and the Vite dev server

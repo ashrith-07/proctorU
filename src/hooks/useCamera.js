@@ -9,6 +9,8 @@ export function useCamera() {
   const start = useCallback(async () => {
     const media = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     streamRef.current = media;
+    // Unplugged / revoked mid-exam: report it (main ignores this outside an exam)
+    media.getVideoTracks()[0].addEventListener('ended', () => window.athena.reportViolation('camera-lost'));
     const grabber = document.createElement('video');
     grabber.muted = true;
     grabber.playsInline = true;
