@@ -15,13 +15,12 @@
     "backend": "node backend/server.cjs",
     "test": "node --test test/*.test.cjs",
     "electron": "electron .",
-    "start": "npm run build && electron ."
+    "start": "npm run build && electron .",
+    "dist": "vite build && electron-builder --mac dmg"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "express": "^5.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -29,10 +28,53 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "electron": "^44.3.0",
+    "electron-builder": "^26.15.3",
     "eslint": "^10.10.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.6",
     "globals": "^17.12.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "vite": "^8.3.0"
+  },
+  "build": {
+    "appId": "com.ashrith.athenaexam",
+    "productName": "Athena Exam",
+    "copyright": "Copyright \u00a9 2026 Ashrith",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "app/**/*",
+      "backend/**/*",
+      "dist/**/*",
+      "package.json",
+      "!backend/data/sessions.json"
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.education",
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "extendInfo": {
+        "NSCameraUsageDescription": "Athena Exam uses your camera to take proctoring snapshots during the exam.",
+        "NSScreenCaptureUsageDescription": "Athena Exam takes periodic screenshots of your screen during the exam."
+      },
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "Athena Exam ${version}",
+      "artifactName": "Athena-Exam-${version}-${arch}.${ext}"
+    }
   }
 }
