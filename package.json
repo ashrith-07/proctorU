@@ -16,7 +16,7 @@
     "test": "node --test test/*.test.cjs",
     "electron": "electron .",
     "start": "vite build && ATHENA_PROD=1 electron .",
-    "dist": "vite build && electron-builder --mac dmg"
+    "dist": "vite build && electron-builder --mac dmg --arm64 --x64"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -60,7 +60,8 @@
         {
           "target": "dmg",
           "arch": [
-            "arm64"
+            "arm64",
+            "x64"
           ]
         }
       ],

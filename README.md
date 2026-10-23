@@ -112,7 +112,7 @@ npm run lint
 npm run dist
 ```
 
-Output: `release/Athena-Exam-<version>-arm64.dmg` (Apple Silicon).
+Output: `release/Athena-Exam-<version>-arm64.dmg` (Apple Silicon) and `release/Athena-Exam-<version>-x64.dmg` (Intel).
 
 The app is **ad-hoc signed, not notarized** (no paid Apple Developer account). If macOS says the
 app "cannot be opened" or "is damaged" after downloading it, either right-click the app and choose
@@ -160,6 +160,6 @@ Run it on its own with `npm run backend` (port 3000, data in `backend/data/`).
 ## Known limitations
 
 - Screen capture covers the primary display only.
-- The `.dmg` is built for Apple Silicon; it is not notarized.
+- The `.dmg` files are not notarized (see the Gatekeeper note above).
 - Questions are fixed in `backend/data/questions.json`; sessions are stored in a JSON file, not a database.
 - No student authentication – the name and ID are self-declared.
